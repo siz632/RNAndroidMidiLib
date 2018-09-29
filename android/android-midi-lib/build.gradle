@@ -1,0 +1,8 @@
+configurations.maybeCreate("default")
+artifacts.add("default", file('android-midi-lib-1.0-SNAPSHOT.jar'))
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+}
