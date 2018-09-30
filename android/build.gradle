@@ -45,11 +45,13 @@ repositories {
 dependencies {
     implementation 'com.facebook.react:react-native:+'
     implementation files('android-midi-lib/android-midi-lib-1.0-SNAPSHOT.jar')
+    implementation 'com.github.billthefarmer:mididriver:v1.15'
 }
 
 
 allprojects {
     repositories {
+        maven { url "https://jitpack.io" }
         mavenCentral()
         google()
         jcenter() //also add it here!!!
