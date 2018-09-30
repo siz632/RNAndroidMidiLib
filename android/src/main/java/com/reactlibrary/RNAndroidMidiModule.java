@@ -32,7 +32,7 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void loadMidiFile(String filename) {
-
+      System.err.println("Loading file... " + filename);
       File input = new File(filename);
 
       try {
