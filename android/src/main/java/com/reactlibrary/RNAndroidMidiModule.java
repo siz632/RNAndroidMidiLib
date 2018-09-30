@@ -47,6 +47,7 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 
       // Get the configuration.
       config = midiDriver.config();
+      Log.d(this.getClass().getName(), "getConfig: " + midiDriver.config());
       // Print out the details.
       Log.d(this.getClass().getName(), "maxVoices: " + config[0]);
       Log.d(this.getClass().getName(), "numChannels: " + config[1]);
