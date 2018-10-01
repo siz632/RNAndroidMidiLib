@@ -7,6 +7,8 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.Callback;
 import com.leff.midi.MidiFile;
 import com.leff.midi.MidiTrack;
+import com.leff.midi.event.MidiEvent;
+import com.leff.midi.examples.EventPrinter;
 import com.leff.midi.util.MidiProcessor;
 
 import android.os.SystemClock;
@@ -16,6 +18,7 @@ import org.billthefarmer.mididriver.MidiDriver;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 
 public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements MidiDriver.OnMidiStartListener {
 
@@ -33,28 +36,30 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
     public RNAndroidMidiModule(ReactApplicationContext reactContext) {
     super(reactContext);
     this.reactContext = reactContext;
+
   }
 
   @Override
   public String getName() {
-    return "RNAndroidMidiModule";
+    return "AndroidMidi";
   }
 
   @ReactMethod
   public void doSomeMidi() {
-      MidiDriver midiDriver = new MidiDriver();
+      midiDriver = new MidiDriver();
       midiDriver.setOnMidiStartListener(this);
+      midiDriver.start();
 
-      // Get the configuration.
+       //Get the configuration.
       config = midiDriver.config();
       Log.d(this.getClass().getName(), "getConfig: " + midiDriver.config());
-      // Print out the details.
+       //Print out the details.
       Log.d(this.getClass().getName(), "maxVoices: " + config[0]);
       Log.d(this.getClass().getName(), "numChannels: " + config[1]);
       Log.d(this.getClass().getName(), "sampleRate: " + config[2]);
       Log.d(this.getClass().getName(), "mixBufferSize: " + config[3]);
 
-      this.selectInstrument(1);
+      selectInstrument(1);
 
 
       this.playNote(60); //middle C
@@ -91,6 +96,34 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 
       midiDriver.stop();
 
+  }
+
+  public void playMidi() {
+        File input = new File("./rolnik.mid");
+
+      try {
+          MidiFile midi = new MidiFile(input);
+          MidiTrack track = midi.getTracks().get(1);
+          Iterator<MidiEvent> it = track.getEvents().iterator();
+
+          MidiProcessor processor = new MidiProcessor(midi);
+          EventPrinter ep2 = new EventPrinter("Listener For All");
+          processor.registerEventListener(ep2, MidiEvent.class);
+          processor.start();
+
+//          while(it.hasNext())
+//          {
+//              MidiEvent event = it.next();
+//
+//              if(!(event instanceof NoteOn) && !(event instanceof NoteOff))
+//              {
+//                  eventsToRemove.add(event);
+//              }
+//          }
+
+      } catch (IOException e) {
+          e.printStackTrace();
+      }
   }
 
     private void selectInstrument(int instrument) {
