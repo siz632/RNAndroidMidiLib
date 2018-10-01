@@ -8,6 +8,8 @@ import com.facebook.react.bridge.Callback;
 import com.leff.midi.MidiFile;
 import com.leff.midi.MidiTrack;
 import com.leff.midi.event.MidiEvent;
+import com.leff.midi.event.NoteOff;
+import com.leff.midi.event.NoteOn;
 import com.leff.midi.examples.EventPrinter;
 import com.leff.midi.util.MidiProcessor;
 
@@ -17,7 +19,10 @@ import android.util.Log;
 import org.billthefarmer.mididriver.MidiDriver;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Iterator;
 
 public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements MidiDriver.OnMidiStartListener {
@@ -41,7 +46,7 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 
   @Override
   public String getName() {
-    return "AndroidMidi";
+    return "RNAndroidMidiModule";
   }
 
   @ReactMethod
@@ -98,30 +103,56 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 
   }
 
-  public void playMidi() {
-        File input = new File("./rolnik.mid");
+  @ReactMethod
+  public void getDir(Callback successCallback) {
+
+      File file = reactContext.getFilesDir();
+      String path = file.getPath();
+      successCallback.invoke(path);
+
+  }
+
+  @ReactMethod
+  public void playMidi(Callback successCallback, Callback errorCallback) {
+//        File input = new File("./rolnik.mid");
+
+      String filename = "rolnik.mid";
 
       try {
-          MidiFile midi = new MidiFile(input);
+//          MidiFile midi = new MidiFile(input);
+//          FileInputStream fis = reactContext.openFileInput("rolnik.mid");
+//          InputStream is = reactContext.getAssets().open(filename);
+          InputStream is = reactContext.getResources().openRawResource(
+                  reactContext.getResources().getIdentifier("rolnik", "raw", reactContext.getPackageName())
+          );
+//          FileInputStream fis = new FileInputStream (new File("./rolnik.mid"));
+          successCallback.invoke("Opened file: " + filename );
+          MidiFile midi = new MidiFile(is);
+
           MidiTrack track = midi.getTracks().get(1);
           Iterator<MidiEvent> it = track.getEvents().iterator();
 
-          MidiProcessor processor = new MidiProcessor(midi);
-          EventPrinter ep2 = new EventPrinter("Listener For All");
-          processor.registerEventListener(ep2, MidiEvent.class);
-          processor.start();
+//          MidiProcessor processor = new MidiProcessor(midi);
+//          EventPrinter ep2 = new EventPrinter("Listener For All");
+//          processor.registerEventListener(ep2, MidiEvent.class);
+//          processor.start();
 
-//          while(it.hasNext())
-//          {
-//              MidiEvent event = it.next();
-//
-//              if(!(event instanceof NoteOn) && !(event instanceof NoteOff))
-//              {
-//                  eventsToRemove.add(event);
-//              }
-//          }
+          while(it.hasNext())
+          {
+              MidiEvent event = it.next();
 
+              if((event instanceof NoteOn))
+              {
+                  playNote(((NoteOn) event).getNoteValue());
+                  SystemClock.sleep(1000);
+                  stopNote(((NoteOn) event).getNoteValue(), false);
+              }
+
+          }
+
+          is.close();
       } catch (IOException e) {
+          errorCallback.invoke(e.getMessage() + " file: " + filename);
           e.printStackTrace();
       }
   }
