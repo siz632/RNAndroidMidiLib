@@ -10,7 +10,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.2.0'
+        classpath 'com.android.tools.build:gradle:3.1.4'
     }
 }
 
@@ -18,10 +18,10 @@ apply plugin: 'com.android.library'
 
 android {
     compileSdkVersion 28
-    buildToolsVersion '28.0.2'
+    buildToolsVersion '28.0.3'
 
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 23
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
@@ -44,8 +44,9 @@ repositories {
 
 dependencies {
     implementation 'com.facebook.react:react-native:+'
-    implementation files('android-midi-lib/android-midi-lib-1.0-SNAPSHOT.jar')
     implementation 'com.github.billthefarmer:mididriver:v1.15'
+    implementation 'org.jcodec:jcodec-android:0.2.3'
+    implementation files('android-midi-lib/android-midi-lib-1.0-SNAPSHOT.jar')
 }
 
 

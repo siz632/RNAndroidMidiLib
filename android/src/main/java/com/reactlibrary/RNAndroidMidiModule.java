@@ -1,33 +1,40 @@
 
 package com.reactlibrary;
 
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
+import android.media.midi.MidiDeviceInfo;
+import android.media.midi.MidiManager;
+import android.media.midi.MidiReceiver;
+import android.os.SystemClock;
+import android.util.Log;
+
+import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
-import com.facebook.react.bridge.Callback;
 import com.leff.midi.MidiFile;
 import com.leff.midi.MidiTrack;
 import com.leff.midi.event.MidiEvent;
 import com.leff.midi.event.NoteOff;
 import com.leff.midi.event.NoteOn;
-import com.leff.midi.examples.EventPrinter;
+import com.leff.midi.event.meta.Tempo;
 import com.leff.midi.util.MidiProcessor;
-
-import android.os.SystemClock;
-import android.util.Log;
 
 import org.billthefarmer.mididriver.MidiDriver;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Iterator;
 
-public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements MidiDriver.OnMidiStartListener {
+public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements MidiDriver.OnMidiStartListener, ScopeLogger {
 
   private final ReactApplicationContext reactContext;
+
+  private MidiManager mMidiManager;
+  private MidiOutputPortSelector mLogSenderSelector;
 
   private MidiFile midi;
   private MidiTrack track;
@@ -37,12 +44,75 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
     private byte[] event;
     private int[] config;
 
+    MidiManager midiManager;
+    MidiFramer mConnectFramer;
+    MidiDeviceInfo[] infos;
+
+    private IntentFilter intentFilter;
+    private BroadcastReceiver receiver;
 
     public RNAndroidMidiModule(ReactApplicationContext reactContext) {
     super(reactContext);
+//    initializeBroadcastReceiver();
     this.reactContext = reactContext;
+        midiDriver = new MidiDriver();
+        midiDriver.setOnMidiStartListener(this);
+
+        // Setup MIDI
+        this.midiManager = (MidiManager) reactContext.getSystemService(reactContext.MIDI_SERVICE);
+
+        // Receiver that prints the messages.
+        LoggingReceiver mLoggingReceiver = new LoggingReceiver(this);
+
+        // Receivers that parses raw data into complete messages.
+        this.mConnectFramer = new MidiFramer(mLoggingReceiver);
+
+//        // Setup a menu to select an input source.
+//        mLogSenderSelector = new MidiOutputPortSelector(mMidiManager, this,
+//                R.id.spinner_senders) {
+//
+//            @Override
+//            public void onPortSelected(final MidiPortWrapper wrapper) {
+//                super.onPortSelected(wrapper);
+//                if (wrapper != null) {
+//                    log(MidiPrinter.formatDeviceInfo(wrapper.getDeviceInfo()));
+//                }
+//            }
+//        };
+
+        MyDirectReceiver mDirectReceiver = new MyDirectReceiver();
+//        mLogSenderSelector.getSender().connect(mDirectReceiver);
+
+//        MSREventBridgeInstanceManagerProvider instanceManagerProvider =
+//                (MSREventBridgeInstanceManagerProvider) this.reactContext;
+
 
   }
+
+
+    class MyDirectReceiver extends MidiReceiver {
+        @Override
+        public void onSend(byte[] data, int offset, int count,
+                           long timestamp) throws IOException {
+//            if (mShowRaw) {
+//                String prefix = String.format("0x%08X, ", timestamp);
+//                logByteArray(prefix, data, offset, count);
+//            }
+            // Send raw data to be parsed into discrete messages.
+            mConnectFramer.send(data, offset, count, timestamp);
+        }
+    }
+
+    private void logByteArray(String prefix, byte[] value, int offset, int count) {
+        StringBuilder builder = new StringBuilder(prefix);
+        for (int i = 0; i < count; i++) {
+            builder.append(String.format("0x%02X", value[offset + i]));
+            if (i != count - 1) {
+                builder.append(", ");
+            }
+        }
+        log(builder.toString());
+    }
 
   @Override
   public String getName() {
@@ -50,10 +120,26 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
   }
 
   @ReactMethod
+  public void getMidiDevices(Callback successCallback) {
+      infos = this.midiManager.getDevices();
+      StringBuilder devices = new StringBuilder("No devices");
+      int i = 0;
+      for (MidiDeviceInfo info : infos) {
+          if (i == 0) {
+              devices = new StringBuilder("");
+          }
+          devices.append("Device ").append(i).append(": ")
+                  .append(/*info.toString() + */info.getProperties().getString("product"))
+                  .append(" ")
+                  .append(info.getProperties().getString("name"))
+                  .append("\n\n");
+          ++i;
+      }
+      successCallback.invoke(devices.toString());
+  }
+
+  @ReactMethod
   public void doSomeMidi() {
-      midiDriver = new MidiDriver();
-      midiDriver.setOnMidiStartListener(this);
-      midiDriver.start();
 
        //Get the configuration.
       config = midiDriver.config();
@@ -65,7 +151,6 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
       Log.d(this.getClass().getName(), "mixBufferSize: " + config[3]);
 
       selectInstrument(1);
-
 
       this.playNote(60); //middle C
       SystemClock.sleep(1000);
@@ -112,43 +197,68 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 
   }
 
+    /**
+     * @param string
+     */
+    @Override
+    public void log(final String string) {
+//        runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                logFromUiThread(string);
+//            }
+//        });
+    }
+
+//  @ReactMethod
+//  public void getPortsInfo() {
+//      MidiDeviceService midiDeviceService = n
+//  }
+
   @ReactMethod
-  public void playMidi(Callback successCallback, Callback errorCallback) {
-//        File input = new File("./rolnik.mid");
-
-      String filename = "rolnik.mid";
-
+  public void playMidi(String filename, int tempo, Callback successCallback, Callback errorCallback) {
+        if (tempo <= 0) {
+            tempo = 120;
+        }
       try {
-//          MidiFile midi = new MidiFile(input);
-//          FileInputStream fis = reactContext.openFileInput("rolnik.mid");
-//          InputStream is = reactContext.getAssets().open(filename);
+
+          midiDriver.start();
+
           InputStream is = reactContext.getResources().openRawResource(
                   reactContext.getResources().getIdentifier("rolnik", "raw", reactContext.getPackageName())
           );
-//          FileInputStream fis = new FileInputStream (new File("./rolnik.mid"));
-          successCallback.invoke("Opened file: " + filename );
+
           MidiFile midi = new MidiFile(is);
+          ArrayList<String> midiLog = new ArrayList<>();
 
           MidiTrack track = midi.getTracks().get(1);
           Iterator<MidiEvent> it = track.getEvents().iterator();
 
-//          MidiProcessor processor = new MidiProcessor(midi);
-//          EventPrinter ep2 = new EventPrinter("Listener For All");
-//          processor.registerEventListener(ep2, MidiEvent.class);
-//          processor.start();
+          float secondsPerMinute = 60f;
+          float tempoFactor = secondsPerMinute / (float) tempo;
 
-          while(it.hasNext())
-          {
+          while(it.hasNext()) {
               MidiEvent event = it.next();
+              midiLog.add(event.toString());
 
-              if((event instanceof NoteOn))
-              {
+              if((event instanceof NoteOn)) {
+                  SystemClock.sleep((long) ((float) event.getDelta() * tempoFactor));
                   playNote(((NoteOn) event).getNoteValue());
-                  SystemClock.sleep(1000);
-                  stopNote(((NoteOn) event).getNoteValue(), false);
+                  midiLog.add("playNote: " + ((NoteOn) event).getNoteValue());
+              } else if ((event instanceof NoteOff)) {
+                  SystemClock.sleep((long) ((float) event.getDelta() * tempoFactor));
+                  stopNote(((NoteOff) event).getNoteValue(), false);
+                  midiLog.add("stopNote: " + ((NoteOff) event).getNoteValue());
+              } else if ((event instanceof Tempo)) {
+                  midiLog.add("Tempo: " + ((Tempo) event).getBpm() + "BPM");
               }
 
           }
+
+          midiDriver.stop();
+
+          successCallback.invoke("Opened file rolink " +
+                  "\n" + midiLog.toString() );
 
           is.close();
       } catch (IOException e) {
