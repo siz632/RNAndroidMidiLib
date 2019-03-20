@@ -18,12 +18,9 @@ public class MidiOutputPortSelector extends MidiPortSelector {
 
     /**
      * @param midiManager
-     * @param activity
-     * @param spinnerId ID from the layout resource
      */
-    public MidiOutputPortSelector(MidiManager midiManager, Activity activity,
-                                  int spinnerId) {
-        super(midiManager, activity, spinnerId, MidiDeviceInfo.PortInfo.TYPE_OUTPUT);
+    public MidiOutputPortSelector(MidiManager midiManager) {
+        super(midiManager, MidiDeviceInfo.PortInfo.TYPE_OUTPUT);
     }
 
     @Override

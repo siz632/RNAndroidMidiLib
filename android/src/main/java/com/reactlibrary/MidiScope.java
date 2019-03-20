@@ -8,7 +8,7 @@ import java.io.IOException;
 public class MidiScope extends MidiDeviceService {
 
     private MidiReceiver mInputReceiver = new MyReceiver();
-    private static MidiFramer mDeviceFramer;
+    private static KeyboardReceiver mDeviceFramer;
 
 
     @Override

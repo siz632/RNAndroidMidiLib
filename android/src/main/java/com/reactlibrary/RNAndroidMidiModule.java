@@ -2,11 +2,17 @@
 package com.reactlibrary;
 
 import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.midi.MidiDevice;
 import android.media.midi.MidiDeviceInfo;
 import android.media.midi.MidiManager;
-import android.media.midi.MidiReceiver;
+import android.media.midi.MidiOutputPort;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
@@ -16,13 +22,13 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.WritableArray;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.leff.midi.MidiFile;
 import com.leff.midi.MidiTrack;
 import com.leff.midi.event.MidiEvent;
 import com.leff.midi.event.NoteOff;
 import com.leff.midi.event.NoteOn;
 import com.leff.midi.event.meta.Tempo;
-import com.leff.midi.util.MidiProcessor;
 
 import org.billthefarmer.mididriver.MidiDriver;
 
@@ -34,68 +40,111 @@ import java.util.Iterator;
 
 public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements MidiDriver.OnMidiStartListener, ScopeLogger {
 
-    private final ReactApplicationContext reactContext;
+    private final ReactApplicationContext mReactContext;
+    public final static String TAG = "MidiOutputPortSelector";
 
-    private MidiManager mMidiManager;
-    private MidiOutputPortSelector mLogSenderSelector;
-
-    private MidiFile midi;
-    private MidiTrack track;
-    private MidiProcessor processor;
+    private LocalBroadcastReceiver mLocalBroadcastReceiver;
 
     private MidiDriver midiDriver;
     private byte[] event;
     private int[] config;
 
+    MidiDevice midiDevice = null;
     MidiManager midiManager;
-    MidiFramer mConnectFramer;
+    KeyboardReceiver keyboardReceiver;
     MidiDeviceInfo[] infos;
-
-    private IntentFilter intentFilter;
-    private BroadcastReceiver receiver;
+    MidiOutputPort outputPort;
 
     public RNAndroidMidiModule(ReactApplicationContext reactContext) {
-    super(reactContext);
-//    initializeBroadcastReceiver();
-    this.reactContext = reactContext;
+        super(reactContext);
+        this.mReactContext = reactContext;
+        this.mLocalBroadcastReceiver = new LocalBroadcastReceiver();
+        LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(reactContext);
+        localBroadcastManager.registerReceiver(mLocalBroadcastReceiver, new IntentFilter("onTestEvent"));
+
         midiDriver = new MidiDriver();
+
         midiDriver.setOnMidiStartListener(this);
         this.midiManager = (MidiManager) reactContext.getSystemService(reactContext.MIDI_SERVICE);
 
-        // Receiver that prints the messages.
-        LoggingReceiver mLoggingReceiver = new LoggingReceiver(this);
+        emitTestEvent();
 
-        // Receivers that parses raw data into complete messages.
-        this.mConnectFramer = new MidiFramer(mLoggingReceiver);
+//        try {
+////            this.midiManager.registerDeviceCallback(new MidiManager.DeviceCallback() {
+////                        public void onDeviceAdded( MidiDeviceInfo info ) {
+////                            //plugged
+//////                            openDevice();
+////                        }
+////                        public void onDeviceRemoved( MidiDeviceInfo info ) {
+////                            //unplugged
+////                        }
+////                    },
+////                    new Handler(Looper.getMainLooper())
+////            );
+////            if (midiDevice == null) {
+//////                openDevice();
+////            }
+//        } catch (Exception e) {
+////            LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(reactContext);
+//            Intent customEvent = new Intent("onExceptionEvent");
+//            customEvent.putExtra("my-extra-data", "E from Native: " + e.toString());
+//            localBroadcastManager.sendBroadcast(customEvent);
+//        }
+    }
 
-//        // Setup a menu to select an input source.
-//        mLogSenderSelector = new MidiOutputPortSelector(mMidiManager, this,
-//                R.id.spinner_senders) {
-//
-//            @Override
-//            public void onPortSelected(final MidiPortWrapper wrapper) {
-//                super.onPortSelected(wrapper);
-//                if (wrapper != null) {
-//                    log(MidiPrinter.formatDeviceInfo(wrapper.getDeviceInfo()));
-//                }
-//            }
-//        };
-
-        MyDirectReceiver mDirectReceiver = new MyDirectReceiver();
-//        mLogSenderSelector.getSender().connect(mDirectReceiver);
-  }
-
-    class MyDirectReceiver extends MidiReceiver {
+    public class LocalBroadcastReceiver extends BroadcastReceiver {
         @Override
-        public void onSend(byte[] data, int offset, int count,
-                           long timestamp) throws IOException {
-//            if (mShowRaw) {
-//                String prefix = String.format("0x%08X, ", timestamp);
-//                logByteArray(prefix, data, offset, count);
-//            }
-            // Send raw data to be parsed into discrete messages.
-            mConnectFramer.send(data, offset, count, timestamp);
+        public void onReceive(Context context, Intent intent) {
+            String someData = intent.getStringExtra("my-extra-data");
+            mReactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                    .emit("onTestEvent", someData);
         }
+    }
+
+    private void emitTestEvent() {
+//        WritableMap payload = Arguments.createMap();
+//        payload.putString("testParam", "paramValue");
+//        this.reactContext
+//                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+//                .emit("onTestEvent", payload);
+        LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(mReactContext);
+        Intent customEvent = new Intent("onTestEvent");
+        customEvent.putExtra("my-extra-data", "that's it");
+        localBroadcastManager.sendBroadcast(customEvent);
+    }
+
+//    class MyDirectReceiver extends MidiReceiver {
+//        @Override
+//        public void onSend(byte[] data, int offset, int count,
+//                           long timestamp) throws IOException {
+//    //            if (mShowRaw) {
+//    //                String prefix = String.format("0x%08X, ", timestamp);
+//    //                logByteArray(prefix, data, offset, count);
+//    //            }
+//            // Send raw data to be parsed into discrete messages.
+//            keyboardReceiver.send(data, offset, count, timestamp);
+//        }
+//    }
+
+    private void openDevice() {
+        this.midiManager.openDevice(
+                this.midiManager.getDevices()[0],
+                new MidiManager.OnDeviceOpenedListener() {
+                    @Override
+                    public void onDeviceOpened(MidiDevice device) {
+                        if (device == null) {
+                            Log.e(TAG, "Could not open device " + midiManager.getDevices()[0]);
+                        } else {
+                            midiDevice = device;
+                            Log.i(TAG, "Opened device " + midiManager.getDevices()[0]);
+                            outputPort = device.openOutputPort(0);
+                            outputPort.connect(new KeyboardReceiver());
+                        }
+                    }
+                },
+                new Handler(Looper.getMainLooper())
+        );
+
     }
 
     private void logByteArray(String prefix, byte[] value, int offset, int count) {
@@ -203,22 +252,9 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 
     @ReactMethod
     public void getDir(Callback successCallback) {
-        File file = reactContext.getFilesDir();
+        File file = mReactContext.getFilesDir();
         String path = file.getPath();
         successCallback.invoke(path);
-    }
-
-    /**
-     * @param string
-     */
-    @Override
-    public void log(final String string) {
-//        runOnUiThread(new Runnable() {
-//            @Override
-//            public void run() {
-//                logFromUiThread(string);
-//            }
-//        });
     }
 
     @ReactMethod
@@ -230,8 +266,8 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 
             midiDriver.start();
 
-            InputStream is = reactContext.getResources().openRawResource(
-                    reactContext.getResources().getIdentifier("rolnik", "raw", reactContext.getPackageName())
+            InputStream is = mReactContext.getResources().openRawResource(
+                    mReactContext.getResources().getIdentifier("rolnik", "raw", mReactContext.getPackageName())
             );
 
             MidiFile midi = new MidiFile(is);
@@ -274,7 +310,6 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
     }
 
     private void selectInstrument(int instrument) {
-
         // Construct a program change to select the instrument on channel 1:
         event = new byte[2];
         event[0] = (byte)(0xC0 | 0x00); // 0xC0 = program change, 0x00 = channel 1
@@ -282,11 +317,9 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 
         // Send the MIDI event to the synthesizer.
         midiDriver.write(event);
-
     }
 
     private void playNote(int noteNumber) {
-
         // Construct a note ON message for the note at maximum velocity on channel 1:
         event = new byte[3];
         event[0] = (byte) (0x90 | 0x00);  // 0x90 = note On, 0x00 = channel 1
@@ -295,11 +328,9 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 
         // Send the MIDI event to the synthesizer.
         midiDriver.write(event);
-
     }
 
     private void stopNote(int noteNumber, boolean sustainUpEvent) {
-
         // Stop the note unless the sustain button is currently pressed. Or stop the note if the
         // sustain button was depressed and the note's button is not pressed.
 //        if (!buttonSustain.isPressed() || sustainUpEvent) {
@@ -356,4 +387,15 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
     protected void onPause() {
         midiDriver.stop();
     }
+
+    @Override
+    public void log(final String string) {
+//        runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                logFromUiThread(string);
+//            }
+//        });
+    }
 }
+

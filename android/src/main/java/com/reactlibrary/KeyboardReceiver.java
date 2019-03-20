@@ -13,16 +13,14 @@ import java.io.IOException;
  *
  * Resolves Running Status and interleaved System Real-Time messages.
  */
-public class MidiFramer extends MidiReceiver {
-    private MidiReceiver mReceiver;
+public class KeyboardReceiver extends MidiReceiver {
     private byte[] mBuffer = new byte[3];
     private int mCount;
     private byte mRunningStatus;
     private int mNeeded;
     private boolean mInSysEx;
 
-    public MidiFramer(MidiReceiver receiver) {
-        mReceiver = receiver;
+    public KeyboardReceiver() {
     }
 
     /*
@@ -49,8 +47,8 @@ public class MidiFramer extends MidiReceiver {
                     } else if (currentInt == 0xF7 /* SysEx End */) {
                         // Log.i(TAG, "SysEx End");
                         if (mInSysEx) {
-                            mReceiver.send(data, sysExStartOffset,
-                                    offset - sysExStartOffset + 1, timestamp);
+//                            mReceiver.send(data, sysExStartOffset,
+//                                    offset - sysExStartOffset + 1, timestamp);
                             mInSysEx = false;
                             sysExStartOffset = -1;
                         }
@@ -63,11 +61,11 @@ public class MidiFramer extends MidiReceiver {
                 } else { // real-time?
                     // Single byte message interleaved with other data.
                     if (mInSysEx) {
-                        mReceiver.send(data, sysExStartOffset,
-                                offset - sysExStartOffset, timestamp);
+//                        mReceiver.send(data, sysExStartOffset,
+//                                offset - sysExStartOffset, timestamp);
                         sysExStartOffset = offset + 1;
                     }
-                    mReceiver.send(data, offset, 1, timestamp);
+//                    mReceiver.send(data, offset, 1, timestamp);
                 }
             } else { // data byte
                 if (!mInSysEx) {
@@ -76,7 +74,7 @@ public class MidiFramer extends MidiReceiver {
                         if (mRunningStatus != 0) {
                             mBuffer[0] = mRunningStatus;
                         }
-                        mReceiver.send(mBuffer, 0, mCount, timestamp);
+//                        mReceiver.send(mBuffer, 0, mCount, timestamp);
                         mNeeded = MidiConstants.getBytesPerMessage(mBuffer[0]) - 1;
                         mCount = 1;
                     }
@@ -87,8 +85,8 @@ public class MidiFramer extends MidiReceiver {
 
         // send any accumulatedSysEx data
         if (sysExStartOffset >= 0 && sysExStartOffset < offset) {
-            mReceiver.send(data, sysExStartOffset,
-                    offset - sysExStartOffset, timestamp);
+//            mReceiver.send(data, sysExStartOffset,
+//                    offset - sysExStartOffset, timestamp);
         }
     }
 

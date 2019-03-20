@@ -65,7 +65,7 @@ public class MidiPrinter {
         return sb.toString();
     }
 
-    // This assumes the message has been aligned using a MidiFramer
+    // This assumes the message has been aligned using a KeyboardReceiver
     // so that the first byte is a status byte.
     public static String formatMessage(byte[] data, int offset, int count) {
         StringBuilder sb = new StringBuilder();

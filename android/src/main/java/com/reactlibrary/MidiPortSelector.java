@@ -36,48 +36,14 @@ import java.util.HashSet;
  */
 public abstract class MidiPortSelector extends DeviceCallback {
     private int mType = MidiDeviceInfo.PortInfo.TYPE_INPUT;
-    protected ArrayAdapter<MidiPortWrapper> mAdapter;
     protected HashSet<MidiPortWrapper> mBusyPorts = new HashSet<MidiPortWrapper>();
-    private Spinner mSpinner;
     protected MidiManager mMidiManager;
-    protected Activity mActivity;
     private MidiPortWrapper mCurrentWrapper;
 
-    /**
-     * @param midiManager
-     * @param activity
-     * @param spinnerId
-     *            ID from the layout resource
-     * @param type
-     *            TYPE_INPUT or TYPE_OUTPUT
-     */
-    public MidiPortSelector(MidiManager midiManager, Activity activity,
-            int spinnerId, int type) {
+    public MidiPortSelector(MidiManager midiManager, int type) {
         mMidiManager = midiManager;
-        mActivity = activity;
         mType = type;
 //        mSpinner = (Spinner) activity.findViewById(spinnerId);
-        mAdapter = new ArrayAdapter<>(mSpinner.getContext(),
-                android.R.layout.simple_spinner_item);
-        mAdapter.setDropDownViewResource(
-                android.R.layout.simple_spinner_dropdown_item);
-        mAdapter.add(new MidiPortWrapper(null, 0, 0));
-
-        mSpinner.setOnItemSelectedListener(
-                new AdapterView.OnItemSelectedListener() {
-
-                    public void onItemSelected(AdapterView<?> parent, View view,
-                            int pos, long id) {
-                        mCurrentWrapper = mAdapter.getItem(pos);
-                        onPortSelected(mCurrentWrapper);
-                    }
-
-                    public void onNothingSelected(AdapterView<?> parent) {
-                        onPortSelected(null);
-                        mCurrentWrapper = null;
-                    }
-                });
-        mSpinner.setAdapter(mAdapter);
 
         MidiDeviceMonitor.getInstance(mMidiManager).registerDeviceCallback(this,
                 new Handler(Looper.getMainLooper()));
@@ -91,10 +57,6 @@ public abstract class MidiPortSelector extends DeviceCallback {
     /**
      * Set to no port selected.
      */
-    public void clearSelection() {
-        mSpinner.setSelection(0);
-    }
-
     private int getInfoPortCount(final MidiDeviceInfo info) {
         int portCount = (mType == MidiDeviceInfo.PortInfo.TYPE_INPUT)
                 ? info.getInputPortCount() : info.getOutputPortCount();
@@ -106,9 +68,7 @@ public abstract class MidiPortSelector extends DeviceCallback {
         int portCount = getInfoPortCount(info);
         for (int i = 0; i < portCount; ++i) {
             MidiPortWrapper wrapper = new MidiPortWrapper(info, mType, i);
-            mAdapter.add(wrapper);
             Log.i(MidiConstants.TAG, wrapper + " was added to " + this);
-            mAdapter.notifyDataSetChanged();
         }
     }
 
@@ -118,12 +78,7 @@ public abstract class MidiPortSelector extends DeviceCallback {
         for (int i = 0; i < portCount; ++i) {
             MidiPortWrapper wrapper = new MidiPortWrapper(info, mType, i);
             MidiPortWrapper currentWrapper = mCurrentWrapper;
-            mAdapter.remove(wrapper);
             // If the currently selected port was removed then select no port.
-            if (wrapper.equals(currentWrapper)) {
-                clearSelection();
-            }
-            mAdapter.notifyDataSetChanged();
             Log.i(MidiConstants.TAG, wrapper + " was removed");
         }
     }
@@ -136,7 +91,6 @@ public abstract class MidiPortSelector extends DeviceCallback {
             MidiDeviceInfo info = status.getDeviceInfo();
             Log.i(MidiConstants.TAG, "MidiPortSelector.onDeviceStatusChanged status = " + status
                     + ", mType = " + mType
-                    + ", activity = " + mActivity.getPackageName()
                     + ", info = " + info);
             // Look for transitions from free to busy.
             int portCount = info.getInputPortCount();
@@ -147,14 +101,10 @@ public abstract class MidiPortSelector extends DeviceCallback {
                         if (!mBusyPorts.contains(wrapper)) {
                             // was free, now busy
                             mBusyPorts.add(wrapper);
-                            mAdapter.remove(wrapper);
-                            mAdapter.notifyDataSetChanged();
                         }
                     } else {
                         if (mBusyPorts.remove(wrapper)) {
                             // was busy, now free
-                            mAdapter.add(wrapper);
-                            mAdapter.notifyDataSetChanged();
                         }
                     }
                 }

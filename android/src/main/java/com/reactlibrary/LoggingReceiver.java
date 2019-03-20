@@ -23,7 +23,7 @@ import java.io.IOException;
 
 /**
  * Convert incoming MIDI messages to a string and write them to a ScopeLogger.
- * Assume that messages have been aligned using a MidiFramer.
+ * Assume that messages have been aligned using a KeyboardReceiver.
  */
 public class LoggingReceiver extends MidiReceiver {
     public static final String TAG = "MidiScope";
