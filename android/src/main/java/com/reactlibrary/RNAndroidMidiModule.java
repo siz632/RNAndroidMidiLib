@@ -7,8 +7,11 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.midi.MidiDevice;
 import android.media.midi.MidiDeviceInfo;
+import android.media.midi.MidiDeviceService;
+import android.media.midi.MidiDeviceStatus;
 import android.media.midi.MidiManager;
 import android.media.midi.MidiOutputPort;
+import android.media.midi.MidiReceiver;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -41,9 +44,10 @@ import java.util.Iterator;
 public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements MidiDriver.OnMidiStartListener, ScopeLogger {
 
     private final ReactApplicationContext mReactContext;
-    public final static String TAG = "MidiOutputPortSelector";
+    public final static String TAG = "rnAndroidMidiModule";
 
     private LocalBroadcastReceiver mLocalBroadcastReceiver;
+    private LocalBroadcastReceiver lastMsgLocalBroadcastReceiver;
 
     private MidiDriver midiDriver;
     private byte[] event;
@@ -58,16 +62,21 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
     public RNAndroidMidiModule(ReactApplicationContext reactContext) {
         super(reactContext);
         this.mReactContext = reactContext;
-        this.mLocalBroadcastReceiver = new LocalBroadcastReceiver();
+        this.keyboardReceiver = new KeyboardReceiver();
+
+        this.mLocalBroadcastReceiver = new LocalBroadcastReceiver("onTestEvent");
+        this.lastMsgLocalBroadcastReceiver = new LocalBroadcastReceiver("onErrorMessageEvent");
+
         LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(reactContext);
         localBroadcastManager.registerReceiver(mLocalBroadcastReceiver, new IntentFilter("onTestEvent"));
+        localBroadcastManager.registerReceiver(lastMsgLocalBroadcastReceiver, new IntentFilter("onErrorMessageEvent"));
 
         midiDriver = new MidiDriver();
-
         midiDriver.setOnMidiStartListener(this);
         this.midiManager = (MidiManager) reactContext.getSystemService(reactContext.MIDI_SERVICE);
 
-        emitTestEvent();
+//        emitMessage();
+//        openDevice();
 
 //        try {
 ////            this.midiManager.registerDeviceCallback(new MidiManager.DeviceCallback() {
@@ -93,23 +102,31 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
     }
 
     public class LocalBroadcastReceiver extends BroadcastReceiver {
+        private String eventName;
+
+        LocalBroadcastReceiver(String eventName) {
+            this.eventName = eventName;
+        }
+
         @Override
         public void onReceive(Context context, Intent intent) {
             String someData = intent.getStringExtra("my-extra-data");
             mReactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                    .emit("onTestEvent", someData);
+                    .emit(eventName, someData);
         }
     }
 
-    private void emitTestEvent() {
-//        WritableMap payload = Arguments.createMap();
-//        payload.putString("testParam", "paramValue");
-//        this.reactContext
-//                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-//                .emit("onTestEvent", payload);
+    private void emitErrorMessage(String errorMessage) {
+        LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(mReactContext);
+        Intent customEvent = new Intent("onErrorMessageEvent");
+        customEvent.putExtra("my-extra-data", errorMessage);
+        localBroadcastManager.sendBroadcast(customEvent);
+    }
+
+    private void emitMessage(String message) {
         LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(mReactContext);
         Intent customEvent = new Intent("onTestEvent");
-        customEvent.putExtra("my-extra-data", "that's it");
+        customEvent.putExtra("my-extra-data", message);
         localBroadcastManager.sendBroadcast(customEvent);
     }
 
@@ -125,26 +142,46 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 //            keyboardReceiver.send(data, offset, count, timestamp);
 //        }
 //    }
-
-    private void openDevice() {
-        this.midiManager.openDevice(
-                this.midiManager.getDevices()[0],
-                new MidiManager.OnDeviceOpenedListener() {
-                    @Override
-                    public void onDeviceOpened(MidiDevice device) {
-                        if (device == null) {
-                            Log.e(TAG, "Could not open device " + midiManager.getDevices()[0]);
-                        } else {
-                            midiDevice = device;
-                            Log.i(TAG, "Opened device " + midiManager.getDevices()[0]);
-                            outputPort = device.openOutputPort(0);
-                            outputPort.connect(new KeyboardReceiver());
-                        }
-                    }
-                },
-                new Handler(Looper.getMainLooper())
-        );
-
+    private void openDevice(final Integer deviceNo) {
+        Log.e(TAG, "Android opening device... " + deviceNo);
+        try {
+            if (this.midiManager.getDevices().length > deviceNo) {
+                Log.e(TAG, "Opening device: " + deviceNo);
+                emitMessage("Opening a device..." + deviceNo);
+//                emitErrorMessage("Opening a device..." + deviceNo);
+                this.midiManager.openDevice(
+                        this.midiManager.getDevices()[deviceNo],
+                        new MidiManager.OnDeviceOpenedListener() {
+                            @Override
+                            public void onDeviceOpened(MidiDevice device) {
+                                emitMessage("onDeviceOpened is executing...");
+                                emitMessage("onDeviceOpened is executing...");
+                                if (device == null) {
+                                    Log.e(TAG, "Could not open device " + midiManager.getDevices()[deviceNo]);
+//                                    emitErrorMessage("Could not open device " + midiManager.getDevices()[deviceNo]);
+                                } else {
+                                    midiDevice = device;
+                                    if (midiManager.getDevices()[0].getOutputPortCount() > 0) {
+                                        Log.i(TAG, "Opened device " + midiManager.getDevices()[deviceNo]);
+                                        emitMessage("Opened device " + midiManager.getDevices()[deviceNo]);
+//                                        emitErrorMessage("Opened device " + midiManager.getDevices()[deviceNo]);
+                                        outputPort = device.openOutputPort(0);
+                                        outputPort.connect(new KeyboardReceiver());
+                                    } else {
+                                        Log.i(TAG, "No output ports for the deice "
+                                                + midiManager.getDevices()[deviceNo]);
+                                    }
+                                }
+                            }
+                        },
+                        new Handler(Looper.getMainLooper())
+                );
+            } else {
+                Log.e(TAG, "DeviceNo " + deviceNo + " is higher than no of devices!");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Could not open device " + midiManager.getDevices()[0]);
+        }
     }
 
     private void logByteArray(String prefix, byte[] value, int offset, int count) {
@@ -161,6 +198,13 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
     @Override
     public String getName() {
         return "RNAndroidMidiModule";
+    }
+
+    @ReactMethod
+    public void selectMidiDevice(Integer deviceNo) {
+        //openDeviceNo
+        Log.e("RNAndroidMidiModule", "Android selecting the device: " + deviceNo);
+        openDevice(deviceNo);
     }
 
     @ReactMethod
@@ -192,6 +236,7 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
                         info.getProperties().getString("product")
                                 + " "
                                 + info.getProperties().getString("name")
+                                + " " + info.getOutputPortCount()
                 );
             }
             promise.resolve(devicesArray);
@@ -263,19 +308,14 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
             tempo = 120;
         }
         try {
-
             midiDriver.start();
-
             InputStream is = mReactContext.getResources().openRawResource(
                     mReactContext.getResources().getIdentifier("rolnik", "raw", mReactContext.getPackageName())
             );
-
             MidiFile midi = new MidiFile(is);
             ArrayList<String> midiLog = new ArrayList<>();
-
             MidiTrack track = midi.getTracks().get(1);
             Iterator<MidiEvent> it = track.getEvents().iterator();
-
             float secondsPerMinute = 60f;
             float tempoFactor = secondsPerMinute / (float) tempo;
 
@@ -294,9 +334,7 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
                 } else if ((event instanceof Tempo)) {
                     midiLog.add("Tempo: " + ((Tempo) event).getBpm() + "BPM");
                 }
-
             }
-
             midiDriver.stop();
 
             successCallback.invoke("Opened file rolink " +
