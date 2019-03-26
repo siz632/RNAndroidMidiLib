@@ -155,20 +155,26 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
                             @Override
                             public void onDeviceOpened(MidiDevice device) {
                                 emitMessage("onDeviceOpened is executing...");
-                                emitMessage("onDeviceOpened is executing...");
+                                emitErrorMessage("onDeviceOpened is executing...");
+                                emitMessage("device is: " + device.toString());
                                 if (device == null) {
                                     Log.e(TAG, "Could not open device " + midiManager.getDevices()[deviceNo]);
-//                                    emitErrorMessage("Could not open device " + midiManager.getDevices()[deviceNo]);
+                                    emitErrorMessage("Could not open device " + midiManager.getDevices()[deviceNo]);
+                                    emitMessage("Could not open device " + midiManager.getDevices()[deviceNo]);
                                 } else {
                                     midiDevice = device;
                                     if (midiManager.getDevices()[0].getOutputPortCount() > 0) {
                                         Log.i(TAG, "Opened device " + midiManager.getDevices()[deviceNo]);
                                         emitMessage("Opened device " + midiManager.getDevices()[deviceNo]);
-//                                        emitErrorMessage("Opened device " + midiManager.getDevices()[deviceNo]);
+                                        emitErrorMessage("Opened device " + midiManager.getDevices()[deviceNo]);
                                         outputPort = device.openOutputPort(0);
                                         outputPort.connect(new KeyboardReceiver());
                                     } else {
                                         Log.i(TAG, "No output ports for the deice "
+                                                + midiManager.getDevices()[deviceNo]);
+                                        emitMessage("No output ports for the deice "
+                                                + midiManager.getDevices()[deviceNo]);
+                                        emitErrorMessage("No output ports for the deice "
                                                 + midiManager.getDevices()[deviceNo]);
                                     }
                                 }
