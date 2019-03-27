@@ -142,6 +142,15 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 //            keyboardReceiver.send(data, offset, count, timestamp);
 //        }
 //    }
+    @ReactMethod
+    public void selectMidiDevice(Integer deviceNo) {
+        //openDeviceNo
+        Log.e("RNAndroidMidiModule", "Android selecting the device: " + deviceNo);
+        openDevice(deviceNo);
+        emitMessage("Opened a port on device..." + this.midiManager.getDevices()[deviceNo]);
+        emitErrorMessage("Opened a port on device..." + this.midiManager.getDevices()[deviceNo]);
+    }
+
     private void openDevice(final Integer deviceNo) {
         Log.e(TAG, "Android opening device... " + deviceNo);
         try {
@@ -204,13 +213,6 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
     @Override
     public String getName() {
         return "RNAndroidMidiModule";
-    }
-
-    @ReactMethod
-    public void selectMidiDevice(Integer deviceNo) {
-        //openDeviceNo
-        Log.e("RNAndroidMidiModule", "Android selecting the device: " + deviceNo);
-        openDevice(deviceNo);
     }
 
     @ReactMethod
