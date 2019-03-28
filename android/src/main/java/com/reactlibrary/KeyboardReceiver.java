@@ -14,13 +14,21 @@ import java.io.IOException;
  * Resolves Running Status and interleaved System Real-Time messages.
  */
 public class KeyboardReceiver extends MidiReceiver {
+    private static final long NANOS_PER_MILLISECOND = 1000000L;
+    private static final long NANOS_PER_SECOND = NANOS_PER_MILLISECOND * 1000L;
+
     private byte[] mBuffer = new byte[3];
     private int mCount;
     private byte mRunningStatus;
     private int mNeeded;
     private boolean mInSysEx;
+    private MsgManager msgM;
+    private long mLastTimeStamp = 0;
+    private long mStartTime;
 
-    public KeyboardReceiver() {
+    public KeyboardReceiver(MsgManager msgM) {
+        mStartTime = System.nanoTime();
+        this.msgM = msgM;
     }
 
     /*
@@ -49,6 +57,12 @@ public class KeyboardReceiver extends MidiReceiver {
                         if (mInSysEx) {
 //                            mReceiver.send(data, sysExStartOffset,
 //                                    offset - sysExStartOffset + 1, timestamp);
+                            msgM.emitErrorMessage("SysEx End: " + data + ", " + sysExStartOffset + ", "
+                                    + (offset - sysExStartOffset + 1) + ", " + timestamp);
+                            msgM.emitErrorMessage(
+                                    convertToMessage(data, sysExStartOffset,
+                                            (offset - sysExStartOffset + 1),
+                                            timestamp));
                             mInSysEx = false;
                             sysExStartOffset = -1;
                         }
@@ -63,9 +77,14 @@ public class KeyboardReceiver extends MidiReceiver {
                     if (mInSysEx) {
 //                        mReceiver.send(data, sysExStartOffset,
 //                                offset - sysExStartOffset, timestamp);
+//                        msgM.emitErrorMessage("RT mInSysEx: " + data + ", " + sysExStartOffset + ", "
+//                                + (offset - sysExStartOffset) + ", " + timestamp);
+                        msgM.emitErrorMessage(convertToMessage(data, sysExStartOffset, (offset - sysExStartOffset), timestamp));
                         sysExStartOffset = offset + 1;
                     }
 //                    mReceiver.send(data, offset, 1, timestamp);
+//                    msgM.emitErrorMessage("RT: " + data + ", " + offset + ", "
+//                            + (1) + ", " + timestamp);
                 }
             } else { // data byte
                 if (!mInSysEx) {
@@ -75,6 +94,10 @@ public class KeyboardReceiver extends MidiReceiver {
                             mBuffer[0] = mRunningStatus;
                         }
 //                        mReceiver.send(mBuffer, 0, mCount, timestamp);
+//                        msgM.emitErrorMessage("Data byte: " + mBuffer + ", " + 0 + ", "
+//                                + mCount + ", " + timestamp);
+                        msgM.emitErrorMessage(convertToMessage(mBuffer, 0, mCount, timestamp));
+
                         mNeeded = MidiConstants.getBytesPerMessage(mBuffer[0]) - 1;
                         mCount = 1;
                     }
@@ -88,6 +111,27 @@ public class KeyboardReceiver extends MidiReceiver {
 //            mReceiver.send(data, sysExStartOffset,
 //                    offset - sysExStartOffset, timestamp);
         }
+    }
+
+    private String convertToMessage(byte[] data, int offset, int count, long timestamp) {
+        StringBuilder sb = new StringBuilder();
+        if (timestamp == 0) {
+            sb.append(String.format("-----0----: "));
+        } else {
+            long monoTime = timestamp - mStartTime;
+            long delayTimeNanos = timestamp - System.nanoTime();
+            int delayTimeMillis = (int)(delayTimeNanos / NANOS_PER_MILLISECOND);
+            double seconds = (double) monoTime / NANOS_PER_SECOND;
+            // Mark timestamps that are out of order.
+//            sb.append((timestamp < mLastTimeStamp) ? "*" : " ");
+//            mLastTimeStamp = timestamp;
+//            sb.append(String.format("%10.3f (%2d): ", seconds, delayTimeMillis));
+        }
+//        sb.append(MidiPrinter.formatBytes(data, offset, count));
+//        sb.append(": ");
+        sb.append(MidiPrinter.formatMessage(data, offset, count));
+        String text = sb.toString();
+        return text;
     }
 
 }

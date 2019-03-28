@@ -46,59 +46,24 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
     private final ReactApplicationContext mReactContext;
     public final static String TAG = "rnAndroidMidiModule";
 
-    private LocalBroadcastReceiver mLocalBroadcastReceiver;
-    private LocalBroadcastReceiver lastMsgLocalBroadcastReceiver;
-
     private MidiDriver midiDriver;
     private byte[] event;
     private int[] config;
 
     MidiDevice midiDevice = null;
     MidiManager midiManager;
-    KeyboardReceiver keyboardReceiver;
     MidiDeviceInfo[] infos;
     MidiOutputPort outputPort;
+    MsgManager msgM;
 
     public RNAndroidMidiModule(ReactApplicationContext reactContext) {
         super(reactContext);
         this.mReactContext = reactContext;
-        this.keyboardReceiver = new KeyboardReceiver();
-
-        this.mLocalBroadcastReceiver = new LocalBroadcastReceiver("onTestEvent");
-        this.lastMsgLocalBroadcastReceiver = new LocalBroadcastReceiver("onErrorMessageEvent");
-
-        LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(reactContext);
-        localBroadcastManager.registerReceiver(mLocalBroadcastReceiver, new IntentFilter("onTestEvent"));
-        localBroadcastManager.registerReceiver(lastMsgLocalBroadcastReceiver, new IntentFilter("onErrorMessageEvent"));
+        this.msgM = new MsgManager(mReactContext);
 
         midiDriver = new MidiDriver();
         midiDriver.setOnMidiStartListener(this);
         this.midiManager = (MidiManager) reactContext.getSystemService(reactContext.MIDI_SERVICE);
-
-//        emitMessage();
-//        openDevice();
-
-//        try {
-////            this.midiManager.registerDeviceCallback(new MidiManager.DeviceCallback() {
-////                        public void onDeviceAdded( MidiDeviceInfo info ) {
-////                            //plugged
-//////                            openDevice();
-////                        }
-////                        public void onDeviceRemoved( MidiDeviceInfo info ) {
-////                            //unplugged
-////                        }
-////                    },
-////                    new Handler(Looper.getMainLooper())
-////            );
-////            if (midiDevice == null) {
-//////                openDevice();
-////            }
-//        } catch (Exception e) {
-////            LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(reactContext);
-//            Intent customEvent = new Intent("onExceptionEvent");
-//            customEvent.putExtra("my-extra-data", "E from Native: " + e.toString());
-//            localBroadcastManager.sendBroadcast(customEvent);
-//        }
     }
 
     public class LocalBroadcastReceiver extends BroadcastReceiver {
@@ -116,20 +81,6 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
         }
     }
 
-    private void emitErrorMessage(String errorMessage) {
-        LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(mReactContext);
-        Intent customEvent = new Intent("onErrorMessageEvent");
-        customEvent.putExtra("my-extra-data", errorMessage);
-        localBroadcastManager.sendBroadcast(customEvent);
-    }
-
-    private void emitMessage(String message) {
-        LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(mReactContext);
-        Intent customEvent = new Intent("onTestEvent");
-        customEvent.putExtra("my-extra-data", message);
-        localBroadcastManager.sendBroadcast(customEvent);
-    }
-
 //    class MyDirectReceiver extends MidiReceiver {
 //        @Override
 //        public void onSend(byte[] data, int offset, int count,
@@ -144,47 +95,48 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 //    }
     @ReactMethod
     public void selectMidiDevice(Integer deviceNo) {
-        //openDeviceNo
+        String deviceName = midiManager.getDevices()[deviceNo].getProperties().getString("name");
+        String deviceProduct = midiManager.getDevices()[deviceNo].getProperties().getString("product");
         Log.e("RNAndroidMidiModule", "Android selecting the device: " + deviceNo);
-        openDevice(deviceNo);
-        emitMessage("Opened a port on device..." + this.midiManager.getDevices()[deviceNo]);
-        emitErrorMessage("Opened a port on device..." + this.midiManager.getDevices()[deviceNo]);
+
+//        if (deviceName.contains("Yamaha") || deviceProduct.contains("Yamaha")) { // to check the nae of the deive...
+            openDevice(deviceNo);
+            msgM.emitMessage("Opened a port on device..." + deviceName);
+            msgM.emitErrorMessage("Opened a port on device..." + deviceName);
+//        }
     }
 
     private void openDevice(final Integer deviceNo) {
+        final String deviceName = midiManager.getDevices()[deviceNo].getProperties().getString("name");
         Log.e(TAG, "Android opening device... " + deviceNo);
         try {
             if (this.midiManager.getDevices().length > deviceNo) {
-                Log.e(TAG, "Opening device: " + deviceNo);
-                emitMessage("Opening a device..." + deviceNo);
-//                emitErrorMessage("Opening a device..." + deviceNo);
+                Log.e(TAG, "Opening device: " + deviceName);
+                msgM.emitMessage("Opening a device..." + deviceName);
                 this.midiManager.openDevice(
                         this.midiManager.getDevices()[deviceNo],
                         new MidiManager.OnDeviceOpenedListener() {
                             @Override
                             public void onDeviceOpened(MidiDevice device) {
-                                emitMessage("onDeviceOpened is executing...");
-                                emitErrorMessage("onDeviceOpened is executing...");
-                                emitMessage("device is: " + device.toString());
+                                msgM.emitMessage("onDeviceOpened is executing...");
+                                msgM.emitErrorMessage("onDeviceOpened is executing...");
+                                msgM.emitMessage("device is: " + device.toString());
                                 if (device == null) {
-                                    Log.e(TAG, "Could not open device " + midiManager.getDevices()[deviceNo]);
-                                    emitErrorMessage("Could not open device " + midiManager.getDevices()[deviceNo]);
-                                    emitMessage("Could not open device " + midiManager.getDevices()[deviceNo]);
+                                    Log.e(TAG, "Could not open device " + deviceName);
+                                    msgM.emitErrorMessage("Could not open device " + deviceName);
+                                    msgM.emitMessage("Could not open device " + deviceName);
                                 } else {
                                     midiDevice = device;
-                                    if (midiManager.getDevices()[0].getOutputPortCount() > 0) {
-                                        Log.i(TAG, "Opened device " + midiManager.getDevices()[deviceNo]);
-                                        emitMessage("Opened device " + midiManager.getDevices()[deviceNo]);
-                                        emitErrorMessage("Opened device " + midiManager.getDevices()[deviceNo]);
+                                    if (midiManager.getDevices()[deviceNo].getOutputPortCount() > 0) {
                                         outputPort = device.openOutputPort(0);
-                                        outputPort.connect(new KeyboardReceiver());
+                                        outputPort.connect(new KeyboardReceiver(msgM));
+                                        Log.i(TAG, "Opened device " + deviceName);
+                                        msgM.emitMessage("Opened device " + deviceName);
+                                        msgM.emitErrorMessage("Opened device " + deviceName);
                                     } else {
-                                        Log.i(TAG, "No output ports for the deice "
-                                                + midiManager.getDevices()[deviceNo]);
-                                        emitMessage("No output ports for the deice "
-                                                + midiManager.getDevices()[deviceNo]);
-                                        emitErrorMessage("No output ports for the deice "
-                                                + midiManager.getDevices()[deviceNo]);
+                                        Log.i(TAG, "No output ports for the deice " + deviceName);
+                                        msgM.emitMessage("No output ports for the deice " + deviceName);
+                                        msgM.emitErrorMessage("No output ports for the deice " + deviceName);
                                     }
                                 }
                             }
