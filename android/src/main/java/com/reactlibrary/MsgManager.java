@@ -11,31 +11,21 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 public class MsgManager {
 
-    private LocalBroadcastReceiver mLocalBroadcastReceiver;
     private LocalBroadcastReceiver lastMsgLocalBroadcastReceiver;
     private ReactApplicationContext mReactContext;
 
     MsgManager(ReactApplicationContext mReactContext) {
         this.mReactContext = mReactContext;
-        this.mLocalBroadcastReceiver = new LocalBroadcastReceiver(mReactContext, "onTestEvent");
-        this.lastMsgLocalBroadcastReceiver = new LocalBroadcastReceiver(mReactContext, "onErrorMessageEvent");
+        this.lastMsgLocalBroadcastReceiver = new LocalBroadcastReceiver(mReactContext, "onSentMsgEvent");
 
         LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(mReactContext);
-        localBroadcastManager.registerReceiver(mLocalBroadcastReceiver, new IntentFilter("onTestEvent"));
-        localBroadcastManager.registerReceiver(lastMsgLocalBroadcastReceiver, new IntentFilter("onErrorMessageEvent"));
+        localBroadcastManager.registerReceiver(lastMsgLocalBroadcastReceiver, new IntentFilter("onSentMsgEvent"));
     }
 
-    public void emitErrorMessage(String errorMessage) {
+    public void emitMsg(String errorMessage) {
         LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(mReactContext);
-        Intent customEvent = new Intent("onErrorMessageEvent");
+        Intent customEvent = new Intent("onSentMsgEvent");
         customEvent.putExtra("my-extra-data", errorMessage);
-        localBroadcastManager.sendBroadcast(customEvent);
-    }
-
-    public void emitMessage(String message) {
-        LocalBroadcastManager localBroadcastManager = LocalBroadcastManager.getInstance(mReactContext);
-        Intent customEvent = new Intent("onTestEvent");
-        customEvent.putExtra("my-extra-data", message);
         localBroadcastManager.sendBroadcast(customEvent);
     }
 

@@ -1,6 +1,7 @@
 package com.reactlibrary;
 
 import android.media.midi.MidiReceiver;
+import android.util.Log;
 
 import java.io.IOException;
 
@@ -57,9 +58,7 @@ public class KeyboardReceiver extends MidiReceiver {
                         if (mInSysEx) {
 //                            mReceiver.send(data, sysExStartOffset,
 //                                    offset - sysExStartOffset + 1, timestamp);
-                            msgM.emitErrorMessage("SysEx End: " + data + ", " + sysExStartOffset + ", "
-                                    + (offset - sysExStartOffset + 1) + ", " + timestamp);
-                            msgM.emitErrorMessage(
+                            msgM.emitMsg(
                                     convertToMessage(data, sysExStartOffset,
                                             (offset - sysExStartOffset + 1),
                                             timestamp));
@@ -75,15 +74,13 @@ public class KeyboardReceiver extends MidiReceiver {
                 } else { // real-time?
                     // Single byte message interleaved with other data.
                     if (mInSysEx) {
-//                        mReceiver.send(data, sysExStartOffset,
-//                                offset - sysExStartOffset, timestamp);
-//                        msgM.emitErrorMessage("RT mInSysEx: " + data + ", " + sysExStartOffset + ", "
+//                        msgM.emitMsg("RT mInSysEx: " + data + ", " + sysExStartOffset + ", "
 //                                + (offset - sysExStartOffset) + ", " + timestamp);
-                        msgM.emitErrorMessage(convertToMessage(data, sysExStartOffset, (offset - sysExStartOffset), timestamp));
+                        msgM.emitMsg(convertToMessage(data, sysExStartOffset, (offset - sysExStartOffset), timestamp));
                         sysExStartOffset = offset + 1;
                     }
 //                    mReceiver.send(data, offset, 1, timestamp);
-//                    msgM.emitErrorMessage("RT: " + data + ", " + offset + ", "
+//                    msgM.emitMsg("RT: " + data + ", " + offset + ", "
 //                            + (1) + ", " + timestamp);
                 }
             } else { // data byte
@@ -94,9 +91,10 @@ public class KeyboardReceiver extends MidiReceiver {
                             mBuffer[0] = mRunningStatus;
                         }
 //                        mReceiver.send(mBuffer, 0, mCount, timestamp);
-//                        msgM.emitErrorMessage("Data byte: " + mBuffer + ", " + 0 + ", "
+//                        msgM.emitMsg("Data byte: " + mBuffer + ", " + 0 + ", "
 //                                + mCount + ", " + timestamp);
-                        msgM.emitErrorMessage(convertToMessage(mBuffer, 0, mCount, timestamp));
+                        Log.i("KBreceiver", "note..");
+                        msgM.emitMsg(convertToMessage(mBuffer, 0, mCount, timestamp));
 
                         mNeeded = MidiConstants.getBytesPerMessage(mBuffer[0]) - 1;
                         mCount = 1;

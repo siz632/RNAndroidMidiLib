@@ -4,18 +4,13 @@ package com.reactlibrary;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.media.midi.MidiDevice;
 import android.media.midi.MidiDeviceInfo;
-import android.media.midi.MidiDeviceService;
-import android.media.midi.MidiDeviceStatus;
 import android.media.midi.MidiManager;
 import android.media.midi.MidiOutputPort;
-import android.media.midi.MidiReceiver;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
@@ -101,42 +96,36 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
 
 //        if (deviceName.contains("Yamaha") || deviceProduct.contains("Yamaha")) { // to check the nae of the deive...
             openDevice(deviceNo);
-            msgM.emitMessage("Opened a port on device..." + deviceName);
-            msgM.emitErrorMessage("Opened a port on device..." + deviceName);
+            msgM.emitMsg("Opened a port on device..." + deviceName);
 //        }
     }
 
     private void openDevice(final Integer deviceNo) {
         final String deviceName = midiManager.getDevices()[deviceNo].getProperties().getString("name");
         Log.e(TAG, "Android opening device... " + deviceNo);
+        msgM.emitMsg("Android opening device... " + deviceNo);
         try {
             if (this.midiManager.getDevices().length > deviceNo) {
                 Log.e(TAG, "Opening device: " + deviceName);
-                msgM.emitMessage("Opening a device..." + deviceName);
                 this.midiManager.openDevice(
                         this.midiManager.getDevices()[deviceNo],
                         new MidiManager.OnDeviceOpenedListener() {
                             @Override
                             public void onDeviceOpened(MidiDevice device) {
-                                msgM.emitMessage("onDeviceOpened is executing...");
-                                msgM.emitErrorMessage("onDeviceOpened is executing...");
-                                msgM.emitMessage("device is: " + device.toString());
+                                msgM.emitMsg("onDeviceOpened is executing...");
                                 if (device == null) {
                                     Log.e(TAG, "Could not open device " + deviceName);
-                                    msgM.emitErrorMessage("Could not open device " + deviceName);
-                                    msgM.emitMessage("Could not open device " + deviceName);
+                                    msgM.emitMsg("Could not open device " + deviceName);
                                 } else {
                                     midiDevice = device;
                                     if (midiManager.getDevices()[deviceNo].getOutputPortCount() > 0) {
                                         outputPort = device.openOutputPort(0);
                                         outputPort.connect(new KeyboardReceiver(msgM));
                                         Log.i(TAG, "Opened device " + deviceName);
-                                        msgM.emitMessage("Opened device " + deviceName);
-                                        msgM.emitErrorMessage("Opened device " + deviceName);
+                                        msgM.emitMsg("Opened device " + deviceName);
                                     } else {
                                         Log.i(TAG, "No output ports for the deice " + deviceName);
-                                        msgM.emitMessage("No output ports for the deice " + deviceName);
-                                        msgM.emitErrorMessage("No output ports for the deice " + deviceName);
+                                        msgM.emitMsg("No output ports for the deice " + deviceName);
                                     }
                                 }
                             }
@@ -147,7 +136,7 @@ public class RNAndroidMidiModule extends ReactContextBaseJavaModule implements M
                 Log.e(TAG, "DeviceNo " + deviceNo + " is higher than no of devices!");
             }
         } catch (Exception e) {
-            Log.e(TAG, "Could not open device " + midiManager.getDevices()[0]);
+            Log.e(TAG, "Could not open device " + midiManager.getDevices()[deviceNo]);
         }
     }
 

@@ -16,7 +16,6 @@
 
 package com.reactlibrary;
 
-import android.app.Activity;
 import android.media.midi.MidiDeviceInfo;
 import android.media.midi.MidiDeviceStatus;
 import android.media.midi.MidiManager;
@@ -24,10 +23,6 @@ import android.media.midi.MidiManager.DeviceCallback;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Spinner;
 
 import java.util.HashSet;
 
@@ -43,7 +38,6 @@ public abstract class MidiPortSelector extends DeviceCallback {
     public MidiPortSelector(MidiManager midiManager, int type) {
         mMidiManager = midiManager;
         mType = type;
-//        mSpinner = (Spinner) activity.findViewById(spinnerId);
 
         MidiDeviceMonitor.getInstance(mMidiManager).registerDeviceCallback(this,
                 new Handler(Looper.getMainLooper()));

@@ -1,6 +1,5 @@
 package com.reactlibrary;
 
-import android.app.Activity;
 import android.media.midi.MidiDevice;
 import android.media.midi.MidiDeviceInfo;
 import android.media.midi.MidiManager;
