@@ -59,7 +59,7 @@ public class LoggingReceiver extends MidiReceiver {
         }
         sb.append(MidiPrinter.formatBytes(data, offset, count));
         sb.append(": ");
-        sb.append(MidiPrinter.formatMessage(data, offset, count));
+        sb.append(MidiPrinter.formatMessage(data, offset, count, timestamp));
         String text = sb.toString();
         mLogger.log(text);
         Log.i(TAG, text);

@@ -127,7 +127,7 @@ public class KeyboardReceiver extends MidiReceiver {
         }
 //        sb.append(MidiPrinter.formatBytes(data, offset, count));
 //        sb.append(": ");
-        sb.append(MidiPrinter.formatMessage(data, offset, count));
+        sb.append(MidiPrinter.formatMessage(data, offset, count, timestamp));
         String text = sb.toString();
         return text;
     }

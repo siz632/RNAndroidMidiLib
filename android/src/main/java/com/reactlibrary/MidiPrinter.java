@@ -67,26 +67,19 @@ public class MidiPrinter {
 
     // This assumes the message has been aligned using a KeyboardReceiver
     // so that the first byte is a status byte.
-    public static String formatMessage(byte[] data, int offset, int count) {
-        StringBuilder sb = new StringBuilder();
+    public static String formatMessage(byte[] data, int offset, int count, long timestamp) {
+        EventData ed = new EventData();
+        ed.setTimestamp(timestamp);
         byte statusByte = data[offset++];
         int status = statusByte & 0xFF;
-        sb.append(getName(status)).append("(");
+        ed.setEventType(getName(status));
         int numData = MidiConstants.getBytesPerMessage(statusByte) - 1;
         if ((status >= 0x80) && (status < 0xF0)) { // channel message
             int channel = status & 0x0F;
-            // Add 1 for humans who think channels are numbered 1-16.
-            sb.append((channel + 1)).append(", ");
+            ed.setChannel(channel + 1); //channels 1-16
         }
-        for (int i = 0; i < numData; i++) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-            sb.append(data[offset++]);
-        }
-        sb.append(")");
-//        return sb.toString();
-        EventData ed = new EventData("On", 100, 1554155994);
+        ed.setNoteByte1(data[offset++]);
+        ed.setNoteByte2(data[offset++]);
         return ed.toJsonString();
     }
 

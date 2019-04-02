@@ -5,15 +5,19 @@ import com.google.gson.GsonBuilder;
 
 public class EventData {
     private String eventType;
-    private int noteNumber;
+    private int channel;
+    private int noteByte1;
+    private int noteByte2;
     private long timestamp;
 
     public EventData() {
     }
 
-    public EventData(String eventType, int noteNumber, long timestamp) {
+    public EventData(String eventType, int channel, int noteByte1, int noteByte2, long timestamp) {
         this.eventType = eventType;
-        this.noteNumber = noteNumber;
+        this.channel = channel;
+        this.noteByte1 = noteByte1;
+        this.noteByte2 = noteByte2;
         this.timestamp = timestamp;
     }
 
@@ -25,16 +29,32 @@ public class EventData {
         this.eventType = eventType;
     }
 
-    public int getNoteNumber() {
-        return noteNumber;
+    public int getNoteByte1() {
+        return noteByte1;
     }
 
-    public void setNoteNumber(int noteNumber) {
-        this.noteNumber = noteNumber;
+    public void setNoteByte1(int noteByte1) {
+        this.noteByte1 = noteByte1;
     }
 
     public long getTimestamp() {
         return timestamp;
+    }
+
+    public int getChannel() {
+        return channel;
+    }
+
+    public void setChannel(int channel) {
+        this.channel = channel;
+    }
+
+    public int getNoteByte2() {
+        return noteByte2;
+    }
+
+    public void setNoteByte2(int noteByte2) {
+        this.noteByte2 = noteByte2;
     }
 
     public void setTimestamp(long timestamp) {
