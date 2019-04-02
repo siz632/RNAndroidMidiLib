@@ -1,5 +1,8 @@
 package com.reactlibrary;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 public class EventData {
     private String eventType;
     private int noteNumber;
@@ -36,5 +39,17 @@ public class EventData {
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
+    }
+
+    /**
+     * @return A JSON representation of this object.
+     */
+    public String toJsonString() {
+        return EventData.createDefaultGson().toJson(this);
+    }
+
+    public static Gson createDefaultGson() {
+        GsonBuilder builder = new GsonBuilder();
+        return builder.create();
     }
 }

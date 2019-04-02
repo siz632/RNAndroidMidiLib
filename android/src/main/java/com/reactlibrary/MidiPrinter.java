@@ -85,7 +85,9 @@ public class MidiPrinter {
             sb.append(data[offset++]);
         }
         sb.append(")");
-        return sb.toString();
+//        return sb.toString();
+        EventData ed = new EventData("On", 100, 1554155994);
+        return ed.toJsonString();
     }
 
     public static String formatDeviceInfo(MidiDeviceInfo info) {
