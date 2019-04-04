@@ -58,7 +58,7 @@ public class KeyboardReceiver extends MidiReceiver {
                         if (mInSysEx) {
 //                            mReceiver.send(data, sysExStartOffset,
 //                                    offset - sysExStartOffset + 1, timestamp);
-                            msgM.emitMsg(
+                            msgM.emitKeyPressed(
                                     convertToMessage(data, sysExStartOffset,
                                             (offset - sysExStartOffset + 1),
                                             timestamp));
@@ -76,7 +76,7 @@ public class KeyboardReceiver extends MidiReceiver {
                     if (mInSysEx) {
 //                        msgM.emitMsg("RT mInSysEx: " + data + ", " + sysExStartOffset + ", "
 //                                + (offset - sysExStartOffset) + ", " + timestamp);
-                        msgM.emitMsg(convertToMessage(data, sysExStartOffset, (offset - sysExStartOffset), timestamp));
+                        msgM.emitKeyPressed(convertToMessage(data, sysExStartOffset, (offset - sysExStartOffset), timestamp));
                         sysExStartOffset = offset + 1;
                     }
 //                    mReceiver.send(data, offset, 1, timestamp);
@@ -94,7 +94,7 @@ public class KeyboardReceiver extends MidiReceiver {
 //                        msgM.emitMsg("Data byte: " + mBuffer + ", " + 0 + ", "
 //                                + mCount + ", " + timestamp);
                         Log.i("KBreceiver", "note..");
-                        msgM.emitMsg(convertToMessage(mBuffer, 0, mCount, timestamp));
+                        msgM.emitKeyPressed(convertToMessage(mBuffer, 0, mCount, timestamp));
 
                         mNeeded = MidiConstants.getBytesPerMessage(mBuffer[0]) - 1;
                         mCount = 1;
